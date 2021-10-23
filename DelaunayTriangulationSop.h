@@ -16,7 +16,7 @@
 
 #include "SOP_CPlusPlusBase.h"
 #include <string>
-
+#include "delaunator-cpp/include/delaunator.hpp"
 
 
 // To get more help about these functions, look at SOP_CPlusPlusBase.h
@@ -52,22 +52,22 @@ public:
 
 private:
 
-	// example functions for generating a geometry, change them with any
-	// fucntions and algorithm:
+	//// example functions for generating a geometry, change them with any
+	//// fucntions and algorithm:
 
-	void cubeGeometry(SOP_Output* output, float scale = 1.0f);
+	//void cubeGeometry(SOP_Output* output, float scale = 1.0f);
 
-	void lineGeometry(SOP_Output* output);
+	//void lineGeometry(SOP_Output* output);
 
-	void triangleGeometry(SOP_Output* output);
+	//void triangleGeometry(SOP_Output* output);
 
-	void cubeGeometryVBO(SOP_VBOOutput* output, float scale = 1.0f);
+	//void cubeGeometryVBO(SOP_VBOOutput* output, float scale = 1.0f);
 
-	void lineGeometryVBO(SOP_VBOOutput* output);
+	//void lineGeometryVBO(SOP_VBOOutput* output);
 
-	void triangleGeometryVBO(SOP_VBOOutput* output);
+	//void triangleGeometryVBO(SOP_VBOOutput* output);
 
-	void particleGeometryVBO(SOP_VBOOutput* output);
+	//void particleGeometryVBO(SOP_VBOOutput* output);
 
 
 	// We don't need to store this pointer, but we do for the example.
@@ -88,4 +88,11 @@ private:
 	std::string             myDat;
 
 	int						myNumVBOTexLayers;
+
+	enum Axis { x, y, z};
+	enum LimitMode {min, center, max};
+
+	float getLimitedValue(const Position* ptArr, size_t numPoints, Axis limitedAxis, LimitMode mode);
+
+	void build2dCoordsVector(std::vector<double>& coords, const Position* ptArr, size_t numPoints, Axis limitedAxis);
 };

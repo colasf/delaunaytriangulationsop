@@ -18,6 +18,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include "delaunator-cpp/include/delaunator.hpp"
 
 // These functions are basic C function, which the DLL loader can find
 // much easier than finding a C++ Class.
@@ -97,273 +98,345 @@ void
 DelaunayTriangulationSop::getGeneralInfo(SOP_GeneralInfo* ginfo, const OP_Inputs* inputs, void* reserved)
 {
 	// This will cause the node to cook every frame
-	ginfo->cookEveryFrameIfAsked = false;
+	ginfo->cookEveryFrameIfAsked = true;
 
 	//if direct to GPU loading:
-	bool directGPU = inputs->getParInt("Gpudirect") != 0 ? true : false;
-	ginfo->directToGPU = directGPU;
+	//bool directGPU = inputs->getParInt("Gpudirect") != 0 ? true : false;
+	ginfo->directToGPU = false;
 
 }
 
 
-//-----------------------------------------------------------------------------------------------------
-//										Generate a geometry on CPU
-//-----------------------------------------------------------------------------------------------------
+////-----------------------------------------------------------------------------------------------------
+////										Generate a geometry on CPU
+////-----------------------------------------------------------------------------------------------------
+//
+//void
+//DelaunayTriangulationSop::cubeGeometry(SOP_Output* output, float scale)
+//{
+//	// to generate a geometry:
+//	// addPoint() is the first function to be called.
+//	// then we can add normals, colors, and any custom attributes for the points
+//	// last function can be either addParticleSystem() or addTriangle()
+//
+//	// front
+//	output->addPoint(Position(1.0f*scale, -1.0f, 1.0f));
+//	output->addPoint(Position(3.0f*scale, -1.0f, 1.0f));
+//	output->addPoint(Position(3.0f*scale, 1.0f, 1.0f));
+//	output->addPoint(Position(1.0f*scale, 1.0, 1.0));
+//	// back
+//	output->addPoint(Position(1.0f*scale, -1.0f, -1.0f));
+//	output->addPoint(Position(3.0f*scale, -1.0f, -1.0f));
+//	output->addPoint(Position(3.0f*scale, 1.0f, -1.0f));
+//	output->addPoint(Position(1.0f*scale, 1.0f, -1.0f));
+//
+//	Vector normal[] = {
+//		// front
+//		Vector(1.0, 0.0, 0.0),
+//		Vector(0.0, 1.0, 0.0),
+//		Vector(0.0, 0.0, 1.0),
+//		Vector(1.0, 1.0, 1.0),
+//		// back
+//		Vector(1.0, 0.0, 0.0),
+//		Vector(0.0, 1.0, 0.0),
+//		Vector(0.0, 0.0, 1.0),
+//		Vector(1.0, 1.0, 1.0),
+//	};
+//
+//	Color color[] =
+//	{
+//		// front colors
+//		Color(1.0, 0.0, 0.0, 1.0),
+//		Color(0.0, 1.0, 0.0, 1.0),
+//		Color(0.0, 0.0, 1.0, 1.0),
+//		Color(1.0, 1.0, 1.0, 1.0),
+//		// back colors
+//		Color(1.0, 0.0, 0.0, 1.0),
+//		Color(0.0, 1.0, 0.0, 1.0),
+//		Color(0.0, 0.0, 1.0, 1.0),
+//		Color(1.0, 1.0, 1.0, 1.0),
+//	};
+//
+//	float color2[] =
+//	{
+//		// front colors
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		// back colors
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//	};
+//
+//	// indices of the input vertices
+//
+//	int32_t vertices[] = {
+//		// front
+//		0, 1, 2,
+//		2, 3, 0,
+//		// top
+//		1, 5, 6,
+//		6, 2, 1,
+//		// back
+//		7, 6, 5,
+//		5, 4, 7,
+//		// bottom
+//		4, 0, 3,
+//		3, 7, 4,
+//		// left
+//		4, 5, 1,
+//		1, 0, 4,
+//		// right
+//		3, 2, 6,
+//		6, 7, 3,
+//	};
+//
+//	int sz = 8;
+//
+//
+//	for (int32_t i = 0; i < sz; ++i)
+//	{
+//		output->setNormal(normal[i], i);
+//		output->setColor(color[i], i);
+//	}
+//
+//	SOP_CustomAttribData cu;
+//	cu.name = "CustomColor";
+//	cu.attribType = AttribType::Float;
+//	cu.floatData = color2;
+//	cu.numComponents = 4;
+//	output->setCustomAttribute(&cu, sz);
+//
+//	for (int i = 0; i < 12; i++)
+//	{
+//		output->addTriangle(vertices[i * 3],
+//							vertices[i * 3 + 1],
+//							vertices[i * 3 + 2]);
+//	}
+//}
+//
+//void
+//DelaunayTriangulationSop::lineGeometry(SOP_Output* output)
+//{
+//	// to generate a geometry:
+//	// addPoint() is the first function to be called.
+//	// then we can add normals, colors, and any custom attributes for the points
+//	// last function to be called is addLines()
+//
+//	// line 1 = 9 vertices
+//	output->addPoint(Position(-0.8f, 0.0f, 1.0f));
+//	output->addPoint(Position(-0.6f, 0.4f, 1.0f));
+//	output->addPoint(Position(-0.4f, 0.8f, 1.0f));
+//	output->addPoint(Position(-0.2f, 0.4f, 1.0f));
+//	output->addPoint(Position(0.0f,  0.0f, 1.0f));
+//	output->addPoint(Position(0.2f, -0.4f, 1.0f));
+//	output->addPoint(Position(0.4f, -0.8f, 1.0f));
+//	output->addPoint(Position(0.6f, -0.4f, 1.0f));
+//	output->addPoint(Position(0.8f,  0.0f, 1.0f));
+//
+//	// line 2 = 8 vertices
+//	output->addPoint(Position(-0.8f, 0.2f, 1.0f));
+//	output->addPoint(Position(-0.6f, 0.6f, 1.0f));
+//	output->addPoint(Position(-0.4f, 1.0f, 1.0f));
+//	output->addPoint(Position(-0.2f, 0.6f, 1.0f));
+//	output->addPoint(Position(0.0f,  0.2f, 1.0f));
+//	output->addPoint(Position(0.2f, -0.2f, 1.0f));
+//	output->addPoint(Position(0.4f, -0.6f, 1.0f));
+//	output->addPoint(Position(0.6f, -0.2f, 1.0f));
+//
+//	Vector normal[] =
+//	{
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//		Vector(1.0f, 1.0f, 1.0f),
+//	};
+//
+//	Color color[] =
+//	{
+//		Color(1.0f, 0.0f, 0.0f, 1.0f),
+//		Color(0.0f, 1.0f, 0.0f, 1.0f),
+//		Color(0.0f, 0.0f, 1.0f, 1.0f),
+//		Color(1.0f, 1.0f, 1.0f, 1.0f),
+//		Color(1.0f, 0.0f, 0.0f, 1.0f),
+//		Color(0.0f, 1.0f, 0.0f, 1.0f),
+//		Color(0.0f, 0.0f, 1.0f, 1.0f),
+//		Color(1.0f, 1.0f, 1.0f, 1.0f),
+//		Color(1.0f, 0.0f, 0.0f, 1.0f),
+//
+//		Color(1.0f, 0.0f, 0.0f, 1.0f),
+//		Color(0.0f, 1.0f, 0.0f, 1.0f),
+//		Color(0.0f, 0.0f, 1.0f, 1.0f),
+//		Color(1.0f, 1.0f, 1.0f, 1.0f),
+//		Color(1.0f, 0.0f, 0.0f, 1.0f),
+//		Color(0.0f, 1.0f, 0.0f, 1.0f),
+//		Color(0.0f, 0.0f, 1.0f, 1.0f),
+//		Color(1.0f, 1.0f, 1.0f, 1.0f),
+//	};
+//
+//	float color2[] =
+//	{
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//		1.0, 0.0, 0.0, 1.0,
+//	};
+//
+//	// indices of the input vertices
+//
+//	int32_t vertices[] =
+//	{
+//		0, 1, 2, 3, 4, 5, 6, 7, 8,
+//		9, 10, 11, 12, 13, 14, 15, 16
+//	};
+//
+//	int32_t lineSizes[]
+//	{
+//		9, 8
+//	};
+//
+//	// the size of all vertices of all lines:
+//	int sz = 9 + 8;
+//
+//	for (int32_t i = 0; i < sz; ++i)
+//	{
+//		output->setNormal(normal[i], i);
+//		output->setColor(color[i], i);
+//	}
+//
+//	SOP_CustomAttribData cu;
+//	cu.name = "CustomColor";
+//	cu.attribType = AttribType::Float;
+//	cu.floatData = color2;
+//	cu.numComponents = 4;
+//	output->setCustomAttribute(&cu, sz);
+//
+//	//output->addLine(vertices, sz);
+//	output->addLines(vertices, lineSizes, 2);
+//}
+//
+//void
+//DelaunayTriangulationSop::triangleGeometry(SOP_Output* output)
+//{
+//	int32_t vertices[3] = { 0, 1, 2 };
+//
+//	//int sz = 3;
+//	output->addPoint(Position(0.0f, 0.0f, 0.0f));
+//	output->addPoint(Position(0.0f, 2.0f, 0.0f));
+//	output->addPoint(Position(2.0f, 0.0f, 0.0f));
+//
+//	Vector normal(0.0f, 0.0f, 1.0f);
+//
+//	output->setNormal(normal, 0);
+//	output->setNormal(normal, 1);
+//	output->setNormal(normal, 2);
+//
+//	output->addTriangle(vertices[0], vertices[1], vertices[2]);
+//
+//}
 
-void
-DelaunayTriangulationSop::cubeGeometry(SOP_Output* output, float scale)
-{
-	// to generate a geometry:
-	// addPoint() is the first function to be called.
-	// then we can add normals, colors, and any custom attributes for the points
-	// last function can be either addParticleSystem() or addTriangle()
+float
+DelaunayTriangulationSop::getLimitedValue(const Position* ptArr, size_t numPoints, Axis axis, LimitMode mode) {
+	float value = 0;
+	float average = 0;
+	// convert the position pointer to a float pointer
+	const float* positions = reinterpret_cast<const float*>(ptArr);
 
-	// front
-	output->addPoint(Position(1.0f*scale, -1.0f, 1.0f));
-	output->addPoint(Position(3.0f*scale, -1.0f, 1.0f));
-	output->addPoint(Position(3.0f*scale, 1.0f, 1.0f));
-	output->addPoint(Position(1.0f*scale, 1.0, 1.0));
-	// back
-	output->addPoint(Position(1.0f*scale, -1.0f, -1.0f));
-	output->addPoint(Position(3.0f*scale, -1.0f, -1.0f));
-	output->addPoint(Position(3.0f*scale, 1.0f, -1.0f));
-	output->addPoint(Position(1.0f*scale, 1.0f, -1.0f));
+	switch (mode) {
 
-	Vector normal[] = {
-		// front
-		Vector(1.0, 0.0, 0.0),
-		Vector(0.0, 1.0, 0.0),
-		Vector(0.0, 0.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		// back
-		Vector(1.0, 0.0, 0.0),
-		Vector(0.0, 1.0, 0.0),
-		Vector(0.0, 0.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-	};
+		// find the smallest value for the specified axis
+		case LimitMode::min:
+			for (size_t i = axis; i < numPoints / 3; i += 3) {
+				// first step
+				if (i < 3) {
+					value = positions[i];
+				}
+				else {
+					if (positions[i] < value) {
+						value = positions[i];
+					}
+				}
+			}
+			break;
 
-	Color color[] =
-	{
-		// front colors
-		Color(1.0, 0.0, 0.0, 1.0),
-		Color(0.0, 1.0, 0.0, 1.0),
-		Color(0.0, 0.0, 1.0, 1.0),
-		Color(1.0, 1.0, 1.0, 1.0),
-		// back colors
-		Color(1.0, 0.0, 0.0, 1.0),
-		Color(0.0, 1.0, 0.0, 1.0),
-		Color(0.0, 0.0, 1.0, 1.0),
-		Color(1.0, 1.0, 1.0, 1.0),
-	};
+		// find the average value for the specified axis
+		case LimitMode::center:
+			for (size_t i = axis; i < numPoints / 3; i += 3) {
+				average += positions[i];
+			}
+			value = average / numPoints;
+			break;
 
-	float color2[] =
-	{
-		// front colors
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		// back colors
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-	};
-
-	// indices of the input vertices
-
-	int32_t vertices[] = {
-		// front
-		0, 1, 2,
-		2, 3, 0,
-		// top
-		1, 5, 6,
-		6, 2, 1,
-		// back
-		7, 6, 5,
-		5, 4, 7,
-		// bottom
-		4, 0, 3,
-		3, 7, 4,
-		// left
-		4, 5, 1,
-		1, 0, 4,
-		// right
-		3, 2, 6,
-		6, 7, 3,
-	};
-
-	int sz = 8;
-
-
-	for (int32_t i = 0; i < sz; ++i)
-	{
-		output->setNormal(normal[i], i);
-		output->setColor(color[i], i);
+		// find the maximum value for the speficied axis
+		case LimitMode::max:
+			for (size_t i = axis; i < numPoints / 3; i += 3) {
+				// first step
+				if (i < 3) {
+					value = positions[i];
+				}
+				else {
+					if (positions[i] > value) {
+						value = positions[i];
+					}
+				}
+			}
+			break;
 	}
+	return value;
+}
 
-	SOP_CustomAttribData cu;
-	cu.name = "CustomColor";
-	cu.attribType = AttribType::Float;
-	cu.floatData = color2;
-	cu.numComponents = 4;
-	output->setCustomAttribute(&cu, sz);
+void DelaunayTriangulationSop::build2dCoordsVector(std::vector<double>& coords,
+												   const Position* ptArr,
+												   size_t numPoints,
+												   Axis limitedAxis) {
+	// convert the position pointer to a float pointer
+	const float* positions = reinterpret_cast<const float*>(ptArr);
 
-	for (int i = 0; i < 12; i++)
-	{
-		output->addTriangle(vertices[i * 3],
-							vertices[i * 3 + 1],
-							vertices[i * 3 + 2]);
+	size_t j = 0;
+	for (size_t i = 0; i < numPoints * 3; i++) {
+
+		// we need to skip the value of the axis we limit
+		if (((i + limitedAxis) % 3) == 0) {
+			continue;
+		}
+
+		// add the values of the other axis to the vector
+		coords[j] = positions[i];
+		j++;
 	}
 }
 
-void
-DelaunayTriangulationSop::lineGeometry(SOP_Output* output)
-{
-	// to generate a geometry:
-	// addPoint() is the first function to be called.
-	// then we can add normals, colors, and any custom attributes for the points
-	// last function to be called is addLines()
-
-	// line 1 = 9 vertices
-	output->addPoint(Position(-0.8f, 0.0f, 1.0f));
-	output->addPoint(Position(-0.6f, 0.4f, 1.0f));
-	output->addPoint(Position(-0.4f, 0.8f, 1.0f));
-	output->addPoint(Position(-0.2f, 0.4f, 1.0f));
-	output->addPoint(Position(0.0f,  0.0f, 1.0f));
-	output->addPoint(Position(0.2f, -0.4f, 1.0f));
-	output->addPoint(Position(0.4f, -0.8f, 1.0f));
-	output->addPoint(Position(0.6f, -0.4f, 1.0f));
-	output->addPoint(Position(0.8f,  0.0f, 1.0f));
-
-	// line 2 = 8 vertices
-	output->addPoint(Position(-0.8f, 0.2f, 1.0f));
-	output->addPoint(Position(-0.6f, 0.6f, 1.0f));
-	output->addPoint(Position(-0.4f, 1.0f, 1.0f));
-	output->addPoint(Position(-0.2f, 0.6f, 1.0f));
-	output->addPoint(Position(0.0f,  0.2f, 1.0f));
-	output->addPoint(Position(0.2f, -0.2f, 1.0f));
-	output->addPoint(Position(0.4f, -0.6f, 1.0f));
-	output->addPoint(Position(0.6f, -0.2f, 1.0f));
-
-	Vector normal[] =
-	{
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-	};
-
-	Color color[] =
-	{
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(0.0f, 1.0f, 0.0f, 1.0f),
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(0.0f, 1.0f, 0.0f, 1.0f),
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(0.0f, 1.0f, 0.0f, 1.0f),
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(0.0f, 1.0f, 0.0f, 1.0f),
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-	};
-
-	float color2[] =
-	{
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-		1.0, 0.0, 0.0, 1.0,
-	};
-
-	// indices of the input vertices
-
-	int32_t vertices[] =
-	{
-		0, 1, 2, 3, 4, 5, 6, 7, 8,
-		9, 10, 11, 12, 13, 14, 15, 16
-	};
-
-	int32_t lineSizes[]
-	{
-		9, 8
-	};
-
-	// the size of all vertices of all lines:
-	int sz = 9 + 8;
-
-	for (int32_t i = 0; i < sz; ++i)
-	{
-		output->setNormal(normal[i], i);
-		output->setColor(color[i], i);
-	}
-
-	SOP_CustomAttribData cu;
-	cu.name = "CustomColor";
-	cu.attribType = AttribType::Float;
-	cu.floatData = color2;
-	cu.numComponents = 4;
-	output->setCustomAttribute(&cu, sz);
-
-	//output->addLine(vertices, sz);
-	output->addLines(vertices, lineSizes, 2);
-}
-
-void
-DelaunayTriangulationSop::triangleGeometry(SOP_Output* output)
-{
-	int32_t vertices[3] = { 0, 1, 2 };
-
-	//int sz = 3;
-	output->addPoint(Position(0.0f, 0.0f, 0.0f));
-	output->addPoint(Position(0.0f, 2.0f, 0.0f));
-	output->addPoint(Position(2.0f, 0.0f, 0.0f));
-
-	Vector normal(0.0f, 0.0f, 1.0f);
-
-	output->setNormal(normal, 0);
-	output->setNormal(normal, 1);
-	output->setNormal(normal, 2);
-
-	output->addTriangle(vertices[0], vertices[1], vertices[2]);
-
-}
 
 void
 DelaunayTriangulationSop::execute(SOP_Output* output, const OP_Inputs* inputs, void* reserved)
@@ -372,860 +445,187 @@ DelaunayTriangulationSop::execute(SOP_Output* output, const OP_Inputs* inputs, v
 
 	if (inputs->getNumInputs() > 0)
 	{
-		inputs->enablePar("Reset", 0);	// not used
-		inputs->enablePar("Shape", 0);	// not used
-		inputs->enablePar("Scale", 0);  // not used
+		//inputs->enablePar("Reset", 0);	// not used
+		//inputs->enablePar("Shape", 0);	// not used
+		//inputs->enablePar("Scale", 0);  // not used
 
+		// get the sop connected to the first input
 		const OP_SOPInput	*sinput = inputs->getInputSOP(0);
 
+		// get the position of the points
 		const Position* ptArr = sinput->getPointPositions();
-		const Vector* normals = nullptr;
-		const Color* colors = nullptr;
-		const TexCoord* textures = nullptr;
-		int32_t numTextures = 0;
 
-		if (sinput->hasNormals())
-		{
-			normals = sinput->getNormals()->normals;
-		}
+		// get the orientation of the plane on which we will project the points on
+		const char* planeOrientation = inputs->getParString("Planeorientation");
 
-		if (sinput->hasColors())
-		{
-			colors = sinput->getColors()->colors;
-		}
+		// store wich axis we will limit to create the place
+		Axis limitedAxis = limitedAxis = Axis::z;
+		if (strcmp(planeOrientation, "XY") == 0) limitedAxis = Axis::z;
+		else if (strcmp(planeOrientation, "YZ") == 0) limitedAxis = Axis::x;
+		else if (strcmp(planeOrientation, "ZX") == 0) limitedAxis = Axis::y;
 
-		if (sinput->getTextures()->numTextureLayers)
-		{
-			textures = sinput->getTextures()->textures;
-			numTextures = sinput->getTextures()->numTextureLayers;
-		}
+		// get how we will limit the axis to put all the points on the same plane
+		const char* limitMethod = inputs->getParString("Limitmode");
 
-		for (int i = 0; i < sinput->getNumPoints(); i++)
-		{
-			output->addPoint(ptArr[i]);
+		// store the method to limit the position
+		LimitMode limitMode = LimitMode::min;
+		if (strcmp(limitMethod, "Min") == 0) limitMode = LimitMode::min;
+		else if (strcmp(limitMethod, "Center") == 0) limitMode = LimitMode::center;
+		else if (strcmp(limitMethod, "Max") == 0) limitMode = LimitMode::max;
 
-			if (normals)
-			{
-				output->setNormal(normals[i], i);
-			}
+		// get the limited value for the selected axis
+		float limitedValue = getLimitedValue(ptArr,
+			                                 sinput->getNumPoints(),
+			                                 limitedAxis,
+			                                 limitMode);
 
-			if (colors)
-			{
-				output->setColor(colors[i], i);
-			}
+		// generate the 2 array of point we will triangulate
+		std::vector<double> coords(static_cast<size_t>(sinput->getNumPoints()) * 2);
 
-			if (textures)
-			{
-				//output->setTexCoord((float*)(textures + (i * numTextures * 3)), numTextures, i);
-				output->setTexCoord(textures + (i * numTextures), numTextures, i);
-			}
+		build2dCoordsVector(coords, ptArr, sinput->getNumPoints(), limitedAxis);
 
-		}
+		delaunator::Delaunator delaunator(coords);
 
-		for (int i = 0; i < sinput->getNumCustomAttributes(); i++)
-		{
-			const SOP_CustomAttribData* customAttr = sinput->getCustomAttribute(i);
+		//for (std::size_t i = 0; i < d.triangles.size(); i += 3) {
+		//	printf(
+		//		"Triangle points: [[%f, %f], [%f, %f], [%f, %f]]\n",
+		//		d.coords[2 * d.triangles[i]],        //tx0
+		//		d.coords[2 * d.triangles[i] + 1],    //ty0
+		//		d.coords[2 * d.triangles[i + 1]],    //tx1
+		//		d.coords[2 * d.triangles[i + 1] + 1],//ty1
+		//		d.coords[2 * d.triangles[i + 2]],    //tx2
+		//		d.coords[2 * d.triangles[i + 2] + 1] //ty2
+		//	     );
+		//}
 
-			if (customAttr->attribType == AttribType::Float)
-			{
-				output->setCustomAttribute(customAttr, sinput->getNumPoints());
-			}
-			else
-			{
-				output->setCustomAttribute(customAttr, sinput->getNumPoints());
-			}
-		}
+		for (std::size_t i = 0; i < delaunator.triangles.size(); i += 3) {
+			Position pointPosA;
+			Position pointPosB;
+			Position pointPosC;
 
+			switch (limitedAxis) {
 
-		for (int i = 0; i < sinput->getNumPrimitives(); i++)
-		{
+			case Axis::x :
+				pointPosA = Position(limitedValue,
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i]]),
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i] + 1]));
+				pointPosB = Position(limitedValue,
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 1]]),
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 1] + 1]));
+				pointPosC = Position(limitedValue,
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 2]]),
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 2] + 1]));
+				break;
 
-			const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(i);
+			case Axis::y:
+				pointPosA = Position(static_cast<float>(delaunator.coords[2 * delaunator.triangles[i]]),
+					limitedValue,
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i] + 1]));
+				pointPosB = Position(static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 1]]),
+					limitedValue,
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 1] + 1]));
+				pointPosC = Position(static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 2]]),
+					limitedValue,
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 2] + 1]));
+				break;
 
-			const int32_t* primVert = primInfo.pointIndices;
-
-			// Note: the addTriangle() assumes that the input SOP has triangulated geometry,
-			// if the input geometry is not a triangle, you need to convert it to triangles first:
-			output->addTriangle(*(primVert), *(primVert + 1), *(primVert + 2));
-		}
-
-	}
-	else
-	{
-		inputs->enablePar("Shape", 1);
-
-		int shape = inputs->getParInt("Shape");
-
-		inputs->enablePar("Scale", 1);
-		double	 scale = inputs->getParDouble("Scale");
-
-		// if there is a input chop parameter:
-		const OP_CHOPInput	*cinput = inputs->getParCHOP("Chop");
-		if (cinput)
-		{
-			int numSamples = cinput->numSamples;
-			int ind = 0;
-			myChopChanName = std::string(cinput->getChannelName(0));
-			myChop = inputs->getParString("Chop");
-
-			myChopChanVal = float(cinput->getChannelData(0)[ind]);
-			scale = float(cinput->getChannelData(0)[ind] * scale);
-
-		}
-
-		// create the geometry and set the bounding box for exact homing:
-		switch (shape)
-		{
-			case 0:		// cube
-			{
-				cubeGeometry(output, (float)scale);
-				output->setBoundingBox(BoundingBox(1.0f, -1.0f, -1.0f, 3.0f, 1.0f, 1.0f));
-
-				// Add Point and Primitive groups:
-				int numPts = output->getNumPoints();
-				int grPts = floor(numPts / 2);
-				int numPr = output->getNumPrimitives();
-
-				const char gr1[] = "pointGroup";
-				const char gr2[] = "primGroup";
-
-				output->addGroup(SOP_GroupType::Point, gr1);
-				output->addGroup(SOP_GroupType::Primitive, gr2);
-
-				for (int i = 0; i < grPts; i++)
-				{
-					output->addPointToGroup(i, gr1);
-				}
-
-				for (int i = 0; i < numPr; i++)
-				{
-					output->addPrimToGroup(i, gr2);
-				}
-
+			case Axis::z:
+				pointPosA = Position(static_cast<float>(delaunator.coords[2 * delaunator.triangles[i]]),
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i] + 1]),
+					limitedValue);
+				pointPosB = Position(static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 1]]),
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 1] + 1]),
+					limitedValue);
+				pointPosC = Position(static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 2]]),
+					static_cast<float>(delaunator.coords[2 * delaunator.triangles[i + 2] + 1]),
+					limitedValue);
 				break;
 			}
-			case 1:		// triangle
-			{
-				triangleGeometry(output);
-				break;
-			}
-			case 2:		// line
-			{
-				lineGeometry(output);
-				break;
-			}
-			default:
-			{
-				cubeGeometry(output, (float)scale);
-				output->setBoundingBox(BoundingBox(1.0f, -1.0f, -1.0f, 3.0f, 1.0f, 1.0f));
-				break;
-			}
+
+			int indexA = output->addPoint(pointPosA);
+			int indexB = output->addPoint(pointPosB);
+			int indexC = output->addPoint(pointPosC);
+			output->addTriangle(indexA, indexB, indexC);
 		}
+
+		//const Vector* normals = nullptr;
+		//const Color* colors = nullptr;
+		//const TexCoord* textures = nullptr;
+		//int32_t numTextures = 0;
+
+		//if (sinput->hasNormals())
+		//{
+		//	normals = sinput->getNormals()->normals;
+		//}
+
+		//if (sinput->hasColors())
+		//{
+		//	colors = sinput->getColors()->colors;
+		//}
+
+		//if (sinput->getTextures()->numTextureLayers)
+		//{
+		//	textures = sinput->getTextures()->textures;
+		//	numTextures = sinput->getTextures()->numTextureLayers;
+		//}
+
+		//for (int i = 0; i < sinput->getNumPoints(); i++)
+		//{
+		//	output->addPoint(ptArr[i]);
+
+		//	if (normals)
+		//	{
+		//		output->setNormal(normals[i], i);
+		//	}
+
+		//	if (colors)
+		//	{
+		//		output->setColor(colors[i], i);
+		//	}
+
+		//	if (textures)
+		//	{
+		//		//output->setTexCoord((float*)(textures + (i * numTextures * 3)), numTextures, i);
+		//		output->setTexCoord(textures + (i * numTextures), numTextures, i);
+		//	}
+
+		//}
+
+		//for (int i = 0; i < sinput->getNumCustomAttributes(); i++)
+		//{
+		//	const SOP_CustomAttribData* customAttr = sinput->getCustomAttribute(i);
+
+		//	if (customAttr->attribType == AttribType::Float)
+		//	{
+		//		output->setCustomAttribute(customAttr, sinput->getNumPoints());
+		//	}
+		//	else
+		//	{
+		//		output->setCustomAttribute(customAttr, sinput->getNumPoints());
+		//	}
+		//}
+
+
+		//for (int i = 0; i < sinput->getNumPrimitives(); i++)
+		//{
+
+		//	const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(i);
+
+		//	const int32_t* primVert = primInfo.pointIndices;
+
+		//	// Note: the addTriangle() assumes that the input SOP has triangulated geometry,
+		//	// if the input geometry is not a triangle, you need to convert it to triangles first:
+		//	output->addTriangle(*(primVert), *(primVert + 1), *(primVert + 2));
+		//}
 
 	}
-
-
 }
-
-//-----------------------------------------------------------------------------------------------------
-//								Generate a geometry and load it straight to GPU (faster)
-//-----------------------------------------------------------------------------------------------------
-
-// fillFaceVBO() get the vertices, normals, colors, texcoords and triangles buffer pointers and then fills in the
-// buffers with the input arguments and their sizes.
-void
-fillFaceVBO(SOP_VBOOutput* output,
-	Position* inVert, Vector* inNormal, Color* inColor, TexCoord* inTexCoord, int32_t*  inIdx,
-	int VertSz, int triSize, int numTexLayers,
-	float scale = 1.0f)
-{
-
-	Position* vertOut = nullptr;
-	if(inVert)
-		vertOut = output->getPos();
-	Vector* normalOut = nullptr;
-	if (inNormal)
-		normalOut = output->getNormals();
-	Color* colorOut = nullptr;
-	if(inColor)
-		colorOut = output->getColors();
-
-	TexCoord* texCoordOut = nullptr;
-	if(inTexCoord)
-		texCoordOut = output->getTexCoords();
-	int32_t* indexBuffer = output->addTriangles(triSize);
-
-	for (int i = 0; i < triSize; i++)
-	{
-		*(indexBuffer++) = inIdx[i * 3 + 0];
-		*(indexBuffer++) = inIdx[i * 3 + 1];
-		*(indexBuffer++) = inIdx[i * 3 + 2];
-	}
-
-	int k = 0;
-	while (k < VertSz * 3)
-	{
-		*(vertOut++) = inVert[k] * scale;
-
-		if (output->hasNormal())
-		{
-			*(normalOut++) = inNormal[k];
-		}
-
-		if (output->hasColor())
-		{
-			*(colorOut++) = inColor[k];
-		}
-
-		if (output->hasTexCoord())
-		{
-			for (int t = 0; t < numTexLayers +1; t++)
-			{
-				*(texCoordOut++) = inTexCoord[(k * (numTexLayers + 1) + t)];
-			}
-		}
-		k++;
-	}
-}
-
-// fillLineVBO() get the vertices, normals, colors, texcoords and triangles buffer pointers and then fills in the
-// buffers with the input arguments and their sizes.
-void
-fillLineVBO(SOP_VBOOutput* output,
-	Position* inVert, Vector* inNormal, Color* inColor, TexCoord* inTexCoord, int32_t*  inIdx,
-	int vertSz, int lineSize, int numTexLayers)
-{
-	Position* vertOut = nullptr;
-	if (inVert)
-		vertOut = output->getPos();
-	Vector* normalOut = nullptr;
-	if (inNormal)
-		normalOut = output->getNormals();
-	Color* colorOut = nullptr;
-	if (inColor)
-		colorOut = output->getColors();
-	TexCoord* texCoordOut = nullptr;
-	if (inTexCoord)
-		texCoordOut = output->getTexCoords();
-
-	int32_t* indexBuffer = output->addLines(lineSize);
-
-	for (int i = 0; i < lineSize; i++)
-	{
-		*(indexBuffer++) = inIdx[i];
-	}
-
-	int k = 0;
-	while (k < vertSz)
-	{
-		*(vertOut++) = inVert[k];
-
-		if (output->hasNormal())
-		{
-			*(normalOut++) = inNormal[k];
-		}
-
-		if (output->hasColor())
-		{
-			*(colorOut++) = inColor[k];
-		}
-
-		if (output->hasTexCoord())
-		{
-			for (int t = 0; t < numTexLayers + 1; t++)
-			{
-				*(texCoordOut++) = inTexCoord[(k * (numTexLayers + 1) + t)];
-			}
-		}
-		k++;
-	}
-}
-
-// fillFaceVBO() get the vertices, normals, colors, texcoords and triangles buffer pointers and then fills in the
-// buffers with the input arguments and their sizes.
-void
-fillParticleVBO(SOP_VBOOutput* output,
-	Position* inVert, Vector* inNormal, Color* inColor, TexCoord* inTexCoord, int32_t*  inIdx,
-	int vertSz, int size, int numTexLayers)
-{
-
-	Position* vertOut = nullptr;
-	if (inVert)
-		vertOut = output->getPos();
-	Vector* normalOut = nullptr;
-	if (inNormal)
-		normalOut = output->getNormals();
-	Color* colorOut = nullptr;
-	if (inColor)
-		colorOut = output->getColors();
-	TexCoord* texCoordOut = nullptr;
-	if (inTexCoord)
-		texCoordOut = output->getTexCoords();
-
-	int32_t* indexBuffer = output->addParticleSystem(size);
-
-	for (int i = 0; i < size; i++)
-	{
-		*(indexBuffer++) = inIdx[i];
-	}
-
-	int k = 0;
-	while (k < vertSz)
-	{
-		*(vertOut++) = inVert[k];
-
-		if (output->hasNormal())
-		{
-			*(normalOut++) = inNormal[k];
-		}
-
-		if (output->hasColor())
-		{
-			*(colorOut++) = inColor[k];
-		}
-
-		if (output->hasTexCoord())
-		{
-			for (int t = 0; t < numTexLayers + 1; t++)
-			{
-				*(texCoordOut++) = inTexCoord[(k * (numTexLayers + 1) + t)];
-			}
-		}
-		k++;
-	}
-}
-
-void
-DelaunayTriangulationSop::cubeGeometryVBO(SOP_VBOOutput* output, float scale)
-{
-	Position pointArr[] =
-	{
-		//front
-		Position(1.0, -1.0, 1.0), //v0
-		Position(3.0, -1.0, 1.0), //v1
-		Position(3.0, 1.0, 1.0),  //v2
-		Position(1.0, 1.0, 1.0), //v3
-
-		//right
-		Position(3.0, 1.0, 1.0), //v2
-		Position(3.0, 1.0, -1.0), //v6
-		Position(3.0, -1.0, -1.0),//v5
-		Position(3.0, -1.0, 1.0),//v1
-
-
-		//back
-		Position(1.0, -1.0, -1.0), //v4
-		Position(3.0, -1.0, -1.0),  //v5
-		Position(3.0, 1.0, -1.0),  //v6
-		Position(1.0, 1.0, -1.0), //v7
-
-
-		//left
-		Position(1.0, -1.0, -1.0), //v4
-		Position(1.0, -1.0, 1.0),// v0
-		Position(1.0, 1.0, 1.0),//v3
-		Position(1.0, 1.0, -1.0),//v7
-
-
-		//upper
-		Position(3.0, 1.0, 1.0),//v1
-		Position(1.0, 1.0, 1.0),//v3
-		Position(1.0, 1.0, -1.0),//v7
-		Position(3.0, 1.0, -1.0),//v6
-
-
-		//bottom
-		Position(1.0, -1.0, -1.0),//v4
-		Position(3.0, -1.0, -1.0),//v5
-		Position(3.0, -1.0, 1.0),//v1
-		Position(1.0, -1.0, 1.0)//v0
-	};
-
-	Vector normals[] =
-	{
-		//front
-		Vector(1.0, 0.0, 0.0), //v0
-		Vector(0.0, 1.0, 0.0),//v1
-		Vector(0.0, 0.0, 1.0),//v2
-		Vector(1.0, 1.0, 1.0),//v3
-
-		//right
-		Vector(0.0, 0.0, 1.0),//v2
-		Vector(0.0, 0.0, 1.0), //v6
-		Vector(0.0, 1.0, 0.0),//v5
-		Vector(0.0, 1.0, 0.0),//v1
-
-		//back
-		Vector(1.0, 0.0, 0.0), //v4
-		Vector(0.0, 1.0, 0.0), //v5
-		Vector(0.0, 0.0, 1.0),//v6
-		Vector(1.0, 1.0, 1.0),//v7
-
-		//left
-		Vector(1.0, 0.0, 0.0), //v4
-		Vector(1.0, 0.0, 0.0),// v0
-		Vector(1.0, 1.0, 1.0),//v3
-		Vector(1.0, 1.0, 1.0),//v7
-
-		//upper
-		Vector(0.0, 1.0, 0.0),//v1
-		Vector(1.0, 1.0, 1.0),//v3
-		Vector(1.0, 1.0, 1.0),//v7
-		Vector(0.0, 0.0, 1.0),//v6
-
-		//bottom
-		Vector(1.0, 0.0, 0.0),//v4
-		Vector(0.0, 1.0, 0.0),//v5
-		Vector(0.0, 1.0, 0.0),//v1
-		Vector(1.0, 0.0, 0.0),//v0
-	};
-
-	Color colors[] = {
-		//front
-		Color(0, 0, 1, 1),
-		Color(1, 0, 1, 1),
-		Color(1, 1, 1, 1),
-		Color(0, 1, 1, 1),
-
-		//right
-		Color(1, 1, 1, 1),
-		Color(1, 1, 0, 1),
-		Color(1, 0, 0, 1),
-		Color(1, 0, 1, 1),
-
-		//back
-		Color(0, 0, 0, 1),
-		Color(1, 0, 0, 1),
-		Color(1, 1, 0, 1),
-		Color(0, 1, 0, 1),
-
-		//left
-		Color(0, 0, 0, 1),
-		Color(0, 0, 1, 1),
-		Color(0, 1, 1, 1),
-		Color(0, 1, 0, 1),
-
-		//up
-		Color(1, 1, 1, 1),
-		Color(0, 1, 1, 1),
-		Color(0, 1, 0, 1),
-		Color(1, 1, 0, 1),
-
-		//bottom
-		Color(0, 0, 0, 1),
-		Color(1, 0, 0, 1),
-		Color(1, 0, 1, 1),
-		Color(0, 0, 1, 1)
-	};
-
-	TexCoord texcoords[] =
-	{
-		//front
-		TexCoord(0.0, 0.0, 0.0),//v0
-		TexCoord(0.0, 1.0, 0.0),//v1
-		TexCoord(1.0, 1.0, 0.0),//v2
-		TexCoord(1.0, 0.0, 0.0),//v3
-
-		//right
-		TexCoord(1.0, 0.0, 0.0),//v2
-		TexCoord(1.0, 1.0, 0.0),//v6
-		TexCoord(1.0, 1.0, 0.0),//v5
-		TexCoord(1.0, 0.0, 0.0),//v1
-
-
-		//back
-		TexCoord(1.0, 0.0, 0.0),//v4
-		TexCoord(1.0, 1.0, 0.0),//v5
-		TexCoord(0.0, 1.0, 0.0),//v6
-		TexCoord(0.0, 0.0, 0.0),//v7
-
-
-		//left
-		TexCoord(0.0, 0.0, 0.0), //v4
-		TexCoord(0.0, 1.0, 0.0), //v0
-		TexCoord(0.0, 1.0, 0.0),//v3
-		TexCoord(0.0, 0.0, 0.0),//v7
-
-
-		//upper
-		TexCoord(0.0, 0.0, 0.0),//v1
-		TexCoord(0.0, 0.0, 0.0),//v3
-		TexCoord(1.0, 0.0, 0.0),//v7
-		TexCoord(1.0, 0.0, 0.0),//v6
-
-
-		//bottom
-		TexCoord(0.0, 0.0, 0.0),//v4
-		TexCoord(0.0, 1.0, 0.0),//v5
-		TexCoord(1.0, 1.0, 0.0),//v1
-		TexCoord(1.0, 1.0, 0.0),//v0
-	};
-
-	int32_t vertices[] =
-	{
-		0,  1,  2,  0,  2,  3,   //front
-		4,  5,  6,  4,  6,  7,   //right
-		8,  9,  10, 8,  10, 11,  //back
-		12, 13, 14, 12, 14, 15,  //left
-		16, 17, 18, 16, 18, 19,  //upper
-		20, 21, 22, 20, 22, 23
-	};
-
-	// fill in the VBO buffers for this cube:
-
-	fillFaceVBO(output, pointArr, normals, colors, texcoords, vertices, 8, 12, myNumVBOTexLayers, scale);
-
-	return;
-}
-
-void
-DelaunayTriangulationSop::lineGeometryVBO(SOP_VBOOutput* output)
-{
-	Position pointArr[] =
-	{
-		Position(-0.8f, 0.0f, 1.0f),
-		Position(-0.6f, 0.4f, 1.0f),
-		Position(-0.4f, 0.8f, 1.0f),
-		Position(-0.2f, 0.4f, 1.0f),
-		Position(0.0f,  0.0f, 1.0f),
-		Position(0.2f, -0.4f, 1.0f),
-		Position(0.4f, -0.8f, 1.0f),
-		Position(0.6f, -0.4f, 1.0f),
-		Position(0.8f,  0.0f, 1.0f),
-	};
-
-	Vector normals[] =
-	{
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-		Vector(1.0, 1.0, 1.0),
-	};
-
-	Color colors[] = {
-		Color(0, 0, 1, 1),
-		Color(1, 0, 1, 1),
-		Color(1, 1, 1, 1),
-		Color(0, 1, 1, 1),
-		Color(1, 1, 1, 1),
-		Color(1, 1, 0, 1),
-		Color(1, 0, 0, 1),
-		Color(1, 0, 1, 1),
-		Color(0, 0, 0, 1),
-	};
-
-	TexCoord texcoords[] =
-	{
-		TexCoord(0.0, 0.0, 0.0),
-		TexCoord(0.0, 1.0, 0.0),
-		TexCoord(1.0, 1.0, 0.0),
-		TexCoord(1.0, 0.0, 0.0),
-		TexCoord(1.0, 0.0, 0.0),
-		TexCoord(1.0, 1.0, 0.0),
-		TexCoord(1.0, 1.0, 0.0),
-		TexCoord(1.0, 0.0, 0.0),
-		TexCoord(1.0, 0.0, 0.0),
-	};
-
-	int32_t vertices[] =
-	{
-		0,  1,  2,  3,  4,  5,
-		6,  7,  8
-	};
-
-	// fill in the VBO buffers for this line:
-	fillLineVBO(output, pointArr, normals, colors, texcoords, vertices, 9, 9, myNumVBOTexLayers);
-	return;
-}
-
-void
-DelaunayTriangulationSop::triangleGeometryVBO(SOP_VBOOutput* output)
-{
-	Vector normals[] =
-	{
-		Vector(1.0f, 0.0f, 0.0f), //v0
-		Vector(0.0f, 1.0f, 0.0f), //v1
-		Vector(0.0f, 0.0f, 1.0f), //v2
-	};
-
-	Color color[] =
-	{
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-	};
-
-	Position pointArr[] =
-	{
-		Position(0.0f, 0.0f, 0.0f),
-		Position(0.0f, 1.0f, 0.0f),
-		Position(1.0f, 0.0f, 0.0f),
-	};
-
-	int32_t vertices[] = { 0, 1, 2 };
-
-	// fill in the VBO buffers for this triangle:
-	fillFaceVBO(output, pointArr, normals, color, nullptr, vertices, 1, myNumVBOTexLayers, 1);
-
-	return;
-}
-
-void
-DelaunayTriangulationSop::particleGeometryVBO(SOP_VBOOutput* output)
-{
-	Position pointArr[] =
-	{
-		Position(-0.8f, 0.0f, 1.0f),
-		Position(-0.6f, 0.4f, 1.0f),
-		Position(-0.4f, 0.8f, 1.0f),
-		Position(-0.2f, 0.4f, 1.0f),
-		Position(0.0f,  0.0f, 1.0f),
-		Position(0.2f, -0.4f, 1.0f),
-		Position(0.4f, -0.8f, 1.0f),
-		Position(0.6f, -0.4f, 1.0f),
-		Position(0.8f, -0.2f, 1.0f),
-
-		Position(-0.8f, 0.2f, 1.0f),
-		Position(-0.6f, 0.6f, 1.0f),
-		Position(-0.4f, 1.0f, 1.0f),
-		Position(-0.2f, 0.6f, 1.0f),
-		Position(0.0f,  0.2f, 1.0f),
-		Position(0.2f, -0.2f, 1.0f),
-		Position(0.4f, -0.6f, 1.0f),
-		Position(0.6f, -0.2f, 1.0f),
-		Position(0.8f,  0.0f, 1.0f),
-
-		Position(-0.8f, -0.2f, 1.0f),
-		Position(-0.6f,  0.2f, 1.0f),
-		Position(-0.4f,  0.6f, 1.0f),
-		Position(-0.2f,  0.2f, 1.0f),
-		Position(0.0f, -0.2f, 1.0f),
-		Position(0.2f, -0.6f, 1.0f),
-		Position(0.4f, -1.0f, 1.0f),
-		Position(0.6f, -0.6f, 1.0f),
-		Position(0.8f, -0.4f, 1.0f),
-	};
-
-
-	Vector normals[] =
-	{
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-		Vector(1.0f, 1.0f, 1.0f),
-
-	};
-
-	Color colors[] =
-	{
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(0.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 0.0f, 1.0f),
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(0.0f, 0.0f, 0.0f, 1.0f),
-
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(0.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 0.0f, 1.0f),
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(0.0f, 0.0f, 0.0f, 1.0f),
-
-		Color(0.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(0.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 1.0f, 1.0f),
-		Color(1.0f, 1.0f, 0.0f, 1.0f),
-		Color(1.0f, 0.0f, 0.0f, 1.0f),
-		Color(1.0f, 0.0f, 1.0f, 1.0f),
-		Color(0.0f, 0.0f, 0.0f, 1.0f),
-	};
-
-	TexCoord texcoords[] =
-	{
-		TexCoord(0.0f, 0.0f, 0.0f),
-		TexCoord(0.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-
-		TexCoord(0.0f, 0.0f, 0.0f),
-		TexCoord(0.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-
-		TexCoord(0.0f, 0.0f, 0.0f),
-		TexCoord(0.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 1.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-		TexCoord(1.0f, 0.0f, 0.0f),
-	};
-
-	int32_t vertices[] =
-	{
-		0,  1,  2,  3,  4,  5,
-		6,  7,  8, 9, 10, 11, 12,
-		13, 14, 15, 16, 17, 18, 19, 20,
-		21, 22, 23, 24, 25, 26
-	};
-
-	// fill in the VBO buffers for this particle system:
-	fillParticleVBO(output, pointArr, normals, colors, texcoords, vertices, 27, 27, myNumVBOTexLayers);
-	return;
-}
-
 
 void
 DelaunayTriangulationSop::executeVBO(SOP_VBOOutput* output,
 						const OP_Inputs* inputs,
 						void* reserved)
 {
-	myExecuteCount++;
-
-	if (!output)
-	{
-		return;
-	}
-
-	if (inputs->getNumInputs() > 0)
-	{
-		// if there is a input node SOP node
-
-		inputs->enablePar("Reset", 0);	// not used
-		inputs->enablePar("Shape", 0);	// not used
-		inputs->enablePar("Scale", 0);  // not used
-	}
-	else
-	{
-		inputs->enablePar("Shape", 0);
-
-		inputs->enablePar("Scale", 1); // enable the scale selection
-		double	 scale = inputs->getParDouble("Scale");
-
-		// In this sample code an input CHOP node parameter is supported,
-		// however it is possible to have DAT or TOP inputs as well
-
-		const OP_CHOPInput	*cinput = inputs->getParCHOP("Chop");
-		if (cinput)
-		{
-			int numSamples = cinput->numSamples;
-			int ind = 0;
-			myChopChanName = std::string(cinput->getChannelName(0));
-			myChop = inputs->getParString("Chop");
-
-			myChopChanVal = float(cinput->getChannelData(0)[ind]);
-			scale = float(cinput->getChannelData(0)[ind] * scale);
-
-		}
-
-		// if the geometry have normals or colors, call enable functions:
-
-		output->enableNormal();
-		output->enableColor();
-		// numLayers 1 means the texcoord will have 1 layer of uvw per each vertex:
-		myNumVBOTexLayers = 1;
-		output->enableTexCoord(myNumVBOTexLayers);
-
-		// add custom attributes and access them in the GLSL (shader) code:
-		SOP_CustomAttribInfo cu1("customColor", 4, AttribType::Float);
-		output->addCustomAttribute(cu1);
-		SOP_CustomAttribInfo cu2("customVert", 1, AttribType::Float);
-		output->addCustomAttribute(cu2);
-
-		// the number of vertices and index buffers must be set before generating any geometries:
-		// set the bounding box for correct homing (specially for Straight to GPU mode):
-#define CUBE_VBO 1
-#define LINE_VBO 0
-#define PARTICLE_VBO 0
-#if CUBE_VBO
-		{
-			//draw Cube:
-			int32_t numVertices = 36;
-			int32_t numIndices = 36;
-
-			output->allocVBO(numVertices, numIndices, VBOBufferMode::Static);
-
-			cubeGeometryVBO(output, (float)scale);
-			output->setBoundingBox(BoundingBox(1.0f, -1.0f, -1.0f, 3.0f, 1.0f, 1.0f));
-		}
-#elif LINE_VBO
-		{
-			// draw Line:
-			int32_t numVertices = 10;
-			int32_t numIndices = 10;
-
-			output->allocVBO(numVertices, numIndices, VBOBufferMode::Static);
-
-			lineGeometryVBO(output);
-		}
-#elif PARTICLE_VBO
-		{
-			// draw Particle System:
-			int32_t numVertices = 27;
-			int32_t numIndices = 27;
-
-			output->allocVBO(numVertices, numIndices, VBOBufferMode::Static);
-
-			particleGeometryVBO(output);
-		}
-#endif
-
-		// once the geometry VBO buffers are filled in, call this function as the last function
-		output->updateComplete();
-
-	}
-
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -1354,66 +754,100 @@ DelaunayTriangulationSop::getInfoDATEntries(int32_t index,
 void
 DelaunayTriangulationSop::setupParameters(OP_ParameterManager* manager, void* reserved)
 {
-	// CHOP
-	{
-		OP_StringParameter	np;
+	//// CHOP
+	//{
+	//	OP_StringParameter	np;
 
-		np.name = "Chop";
-		np.label = "CHOP";
+	//	np.name = "Chop";
+	//	np.label = "CHOP";
 
-		OP_ParAppendResult res = manager->appendCHOP(np);
-		assert(res == OP_ParAppendResult::Success);
-	}
+	//	OP_ParAppendResult res = manager->appendCHOP(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
 
-	// scale
-	{
-		OP_NumericParameter	np;
+	//// scale
+	//{
+	//	OP_NumericParameter	np;
 
-		np.name = "Scale";
-		np.label = "Scale";
-		np.defaultValues[0] = 1.0;
-		np.minSliders[0] = -10.0;
-		np.maxSliders[0] = 10.0;
+	//	np.name = "Scale";
+	//	np.label = "Scale";
+	//	np.defaultValues[0] = 1.0;
+	//	np.minSliders[0] = -10.0;
+	//	np.maxSliders[0] = 10.0;
 
-		OP_ParAppendResult res = manager->appendFloat(np);
-		assert(res == OP_ParAppendResult::Success);
-	}
+	//	OP_ParAppendResult res = manager->appendFloat(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
 
-	// shape
+	//// shape
+	//{
+	//	OP_StringParameter	sp;
+
+	//	sp.name = "Shape";
+	//	sp.label = "Shape";
+
+	//	sp.defaultValue = "Cube";
+
+	//	const char *names[] = { "Cube", "Triangle", "Line" };
+	//	const char *labels[] = { "Cube", "Triangle", "Line" };
+
+	//	OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+
+	//// GPU Direct
+	//{
+	//	OP_NumericParameter np;
+
+	//	np.name = "Gpudirect";
+	//	np.label = "GPU Direct";
+
+	//	OP_ParAppendResult res = manager->appendToggle(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+
+	//// pulse
+	//{
+	//	OP_NumericParameter	np;
+
+	//	np.name = "Reset";
+	//	np.label = "Reset";
+
+	//	OP_ParAppendResult res = manager->appendPulse(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+	
+	
+
+	// limit mode
 	{
 		OP_StringParameter	sp;
 
-		sp.name = "Shape";
-		sp.label = "Shape";
+		sp.name = "Planeorientation";
+		sp.label = "Plane Orientation";
 
-		sp.defaultValue = "Cube";
+		sp.defaultValue = "XY";
 
-		const char *names[] = { "Cube", "Triangle", "Line" };
-		const char *labels[] = { "Cube", "Triangle", "Line" };
+		const char* names[] = { "XY", "YZ", "ZX" };
+		const char* labels[] = { "XY Plane", "YZ Plane", "ZX Plane" };
 
 		OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
-	// GPU Direct
+	// limit mode
 	{
-		OP_NumericParameter np;
+		OP_StringParameter	sp;
 
-		np.name = "Gpudirect";
-		np.label = "GPU Direct";
+		sp.name = "Limitmode";
+		sp.label = "Limit Mode";
 
-		OP_ParAppendResult res = manager->appendToggle(np);
-		assert(res == OP_ParAppendResult::Success);
-	}
+		sp.defaultValue = "Center";
 
-	// pulse
-	{
-		OP_NumericParameter	np;
+		const char* names[] = { "Min", "Center", "Max" };
+		const char* labels[] = { "Min", "Center", "Max" };
 
-		np.name = "Reset";
-		np.label = "Reset";
-
-		OP_ParAppendResult res = manager->appendPulse(np);
+		OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
 		assert(res == OP_ParAppendResult::Success);
 	}
 
