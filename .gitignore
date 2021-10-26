@@ -352,3 +352,4 @@ MigrationBackup/
 # touch designer
 touchdesigner/test.*.toe
 touchdesigner/Backup/*
+touchdesigner/Plugins/*
