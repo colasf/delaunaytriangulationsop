@@ -60,7 +60,7 @@ private:
 
 
 	enum Axis { x, y, z};
-	enum LimitMode {min, center, max};
+	enum LimitMode {min, center, max, zero};
 
 	float getLimitedValue(const Position* ptArr, size_t numPoints, Axis limitedAxis, LimitMode mode);
 

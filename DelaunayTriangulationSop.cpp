@@ -100,6 +100,10 @@ float
 DelaunayTriangulationSop::getLimitedValue(const Position* ptArr, size_t numPoints, Axis axis, LimitMode mode) {
 	float value = 0;
 	float average = 0;
+
+	if (mode == LimitMode::zero) {
+		return 0.0f;
+	}
 	
 	// convert the position pointer to a float pointer
 	const float* positions = reinterpret_cast<const float*>(ptArr);
@@ -184,6 +188,7 @@ DelaunayTriangulationSop::execute(SOP_Output* output, const OP_Inputs* inputs, v
 		if (strcmp(limitMethod, "Min") == 0) limitMode = LimitMode::min;
 		else if (strcmp(limitMethod, "Center") == 0) limitMode = LimitMode::center;
 		else if (strcmp(limitMethod, "Max") == 0) limitMode = LimitMode::max;
+		else if (strcmp(limitMethod, "Zero") == 0) limitMode = LimitMode::zero;
 
 		// get the limited value for the selected axis
 		float limitedValue = getLimitedValue(ptArr,
@@ -191,11 +196,11 @@ DelaunayTriangulationSop::execute(SOP_Output* output, const OP_Inputs* inputs, v
 			                                 limitedAxis,
 			                                 limitMode);
 
-		// generate the 2 array of point we will triangulate
+		// generate the array of 2d point we will triangulate
 		std::vector<double> coords(static_cast<size_t>(sinput->getNumPoints()) * 2);
-
 		build2dCoordsVector(coords, ptArr, sinput->getNumPoints(), limitedAxis);
 
+		// do the delaunay triangulation
 		delaunator::Delaunator delaunator(coords);
 
 		for (std::size_t i = 0; i < delaunator.triangles.size(); i += 3) {
@@ -319,10 +324,10 @@ DelaunayTriangulationSop::setupParameters(OP_ParameterManager* manager, void* re
 
 		sp.defaultValue = "Center";
 
-		const char* names[] = { "Min", "Center", "Max" };
-		const char* labels[] = { "Min", "Center", "Max" };
+		const char* names[] = { "Min", "Center", "Max", "Zero" };
+		const char* labels[] = { "Min", "Center", "Max", "Zero" };
 
-		OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
+		OP_ParAppendResult res = manager->appendMenu(sp, 4, names, labels);
 		assert(res == OP_ParAppendResult::Success);
 	}
 }
