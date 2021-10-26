@@ -100,6 +100,7 @@ float
 DelaunayTriangulationSop::getLimitedValue(const Position* ptArr, size_t numPoints, Axis axis, LimitMode mode) {
 	float value = 0;
 	float average = 0;
+	
 	// convert the position pointer to a float pointer
 	const float* positions = reinterpret_cast<const float*>(ptArr);
 
@@ -143,7 +144,7 @@ void DelaunayTriangulationSop::build2dCoordsVector(std::vector<double>& coords,
 	for (size_t i = 0; i < numPoints * 3; i++) {
 
 		// we need to skip the value of the axis we limit
-		if (((i + limitedAxis) % 3) == 0) {
+		if ((i % 3) == limitedAxis) {
 			continue;
 		}
 
@@ -196,7 +197,6 @@ DelaunayTriangulationSop::execute(SOP_Output* output, const OP_Inputs* inputs, v
 		build2dCoordsVector(coords, ptArr, sinput->getNumPoints(), limitedAxis);
 
 		delaunator::Delaunator delaunator(coords);
-
 
 		for (std::size_t i = 0; i < delaunator.triangles.size(); i += 3) {
 			Position pointPosA;
