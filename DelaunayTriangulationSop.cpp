@@ -107,16 +107,9 @@ DelaunayTriangulationSop::getLimitedValue(const Position* ptArr, size_t numPoint
 
 		// find the smallest value for the specified axis
 		case LimitMode::min:
+			value = positions[axis];
 			for (size_t i = axis; i < numPoints / 3; i += 3) {
-				// first step
-				if (i < 3) {
-					value = positions[i];
-				}
-				else {
-					if (positions[i] < value) {
-						value = positions[i];
-					}
-				}
+				value = std::min(positions[i], value);
 			}
 			break;
 
@@ -130,16 +123,9 @@ DelaunayTriangulationSop::getLimitedValue(const Position* ptArr, size_t numPoint
 
 		// find the maximum value for the speficied axis
 		case LimitMode::max:
+			value = positions[axis];
 			for (size_t i = axis; i < numPoints / 3; i += 3) {
-				// first step
-				if (i < 3) {
-					value = positions[i];
-				}
-				else {
-					if (positions[i] > value) {
-						value = positions[i];
-					}
-				}
+				value = std::max(value, positions[i]);
 			}
 			break;
 	}
@@ -339,7 +325,6 @@ DelaunayTriangulationSop::setupParameters(OP_ParameterManager* manager, void* re
 		OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
 		assert(res == OP_ParAppendResult::Success);
 	}
-
 }
 
 void
