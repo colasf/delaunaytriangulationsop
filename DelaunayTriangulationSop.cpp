@@ -37,20 +37,20 @@ extern "C"
 		// The opType is the unique name for this TOP. It must start with a 
 		// capital A-Z character, and all the following characters must lower case
 		// or numbers (a-z, 0-9)
-		info->customOPInfo.opType->setString("Simpleshapes");
+		info->customOPInfo.opType->setString("Delaunaytriangulationsop");
 
 		// The opLabel is the text that will show up in the OP Create Dialog
-		info->customOPInfo.opLabel->setString("Simple Shapes");
+		info->customOPInfo.opLabel->setString("Delaunay Triangulation SOP");
 
 		// Will be turned into a 3 letter icon on the nodes
-		info->customOPInfo.opIcon->setString("SSP");
+		info->customOPInfo.opIcon->setString("DTR");
 
 		// Information about the author of this OP
-		info->customOPInfo.authorName->setString("Author Name");
-		info->customOPInfo.authorEmail->setString("email@email.com");
+		info->customOPInfo.authorName->setString("Colas Fiszman");
+		info->customOPInfo.authorEmail->setString("colas.fiszman@gmail.com");
 
 		// This SOP works with 0 or 1 inputs
-		info->customOPInfo.minInputs = 0;
+		info->customOPInfo.minInputs = 1;
 		info->customOPInfo.maxInputs = 1;
 
 	}
